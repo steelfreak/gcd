@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Document Viewer</title>
+  <style>
+    /* Reset & CSS Variables */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --primary-color: #0d6efd;
+      --primary-hover: #0b5ed7;
+      --bg-color: #f8f9fa;
+      --card-bg: #ffffff;
+      --text-color: #212529;
+      --text-muted: #6c757d;
+      --border-color: #dee2e6;
+      --radius: 8px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.5;
+      padding: 20px 15px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* PDF Document List */
+    .pdf-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pdf-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .pdf-item:hover {
+      border-color: var(--primary-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .pdf-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .pdf-icon {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      fill: #dc3545;
+    }
+
+    .pdf-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .view-btn {
+      background-color: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 0.2s;
+    }
+
+    .pdf-item:hover .view-btn {
+      background-color: var(--primary-hover);
+    }
+
+    /* Modal / Popup Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-container {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 1000px;
+      height: 90vh;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-right: 12px;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .modal-close:hover {
+      color: var(--text-color);
+    }
+
+    .modal-body {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #525659; /* Standard PDF viewer background */
+    }
+
+    .modal-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Responsive Adjustments for Mobile */
+    @media (max-width: 576px) {
+      body {
+        padding: 12px 10px;
+      }
+
+      .pdf-item {
+        padding: 12px;
+      }
+
+      .view-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+      }
+
+      .modal-container {
+        height: 95vh;
+      }
+
+      .modal-header {
+        padding: 10px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Document Library</h1>
+      <p>Select a document to preview inline</p>
+    </header>
+
+    <ul class="pdf-list" id="pdfList"></ul>
+  </div>
+
+  <!-- Modal / Popup -->
+  <div class="modal-overlay" id="pdfModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <span class="modal-title" id="modalTitle">Document Viewer</span>
+        <button class="modal-close" id="closeModal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="pdfFrame" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // List your PDF files here (located in the ./pdf/ directory)
+    const pdfFiles = [
+      "animator.pdf",
+      "WCUGU2025.pdf",
+      "User_Manual_v1.0.pdf",
+      "Financial_Summary.pdf"
+    ];
+
+    const pdfListElement = document.getElementById("pdfList");
+    const modal = document.getElementById("pdfModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const pdfFrame = document.getElementById("pdfFrame");
+    const closeModalBtn = document.getElementById("closeModal");
+
+    // SVG PDF Icon
+    const pdfIconSvg = `
+      <svg class="pdf-icon" viewBox="0 0 24 24">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9H13c.8 0 1.5.7 1.5 1.5v3zm4-3.5h-3v1.5h2v1.5h-2V15h-1.5V9H18.5v1.5zM7 10.5h1v1H7v-1zm4.5 0h1v3h-1v-3z"/>
+      </svg>
+    `;
+
+    // Render list items dynamically
+    function renderPdfList() {
+      pdfListElement.innerHTML = "";
+      pdfFiles.forEach(filename => {
+        const li = document.createElement("li");
+        li.className = "pdf-item";
+        li.innerHTML = `
+          <div class="pdf-info">
+            ${pdfIconSvg}
+            <span class="pdf-name">${filename}</span>
+          </div>
+          <button class="view-btn">View</button>
+        `;
+
+        li.addEventListener("click", () => openPdfModal(filename));
+        pdfListElement.appendChild(li);
+      });
+    }
+
+    // Open Modal
+    function openPdfModal(filename) {
+      const pdfUrl = `pdf/${encodeURIComponent(filename)}`;
+      modalTitle.textContent = filename;
+      pdfFrame.src = pdfUrl;
+      modal.classList.add("active");
+      document.body.style.overflow = "hidden"; // Prevent background scroll
+    }
+
+    // Close Modal
+    function closePdfModal() {
+      modal.classList.remove("active");
+      pdfFrame.src = ""; // Clear iframe source
+      document.body.style.overflow = ""; // Restore background scroll
+    }
+
+    // Event Listeners for closing modal
+    closeModalBtn.addEventListener("click", closePdfModal);
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closePdfModal();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("active")) {
+        closePdfModal();
+      }
+    });
+
+    // Initial render
+    renderPdfList();
+  </script>
+</body>
+</html>

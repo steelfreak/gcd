@@ -14,6 +14,8 @@
     :root {
       --primary-color: #0d6efd;
       --primary-hover: #0b5ed7;
+      --secondary-color: #198754;
+      --secondary-hover: #157347;
       --bg-color: #f8f9fa;
       --card-bg: #ffffff;
       --text-color: #212529;
@@ -96,21 +98,44 @@
       text-overflow: ellipsis;
     }
 
-    .view-btn {
-      background-color: var(--primary-color);
-      color: #fff;
+    /* Action Buttons Container */
+    .pdf-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .view-btn, .download-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
       border: none;
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 6px;
       font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
-      flex-shrink: 0;
       transition: background-color 0.2s;
+    }
+
+    .view-btn {
+      background-color: var(--primary-color);
+      color: #fff;
     }
 
     .pdf-item:hover .view-btn {
       background-color: var(--primary-hover);
+    }
+
+    .download-btn {
+      background-color: var(--secondary-color);
+      color: #fff;
+    }
+
+    .download-btn:hover {
+      background-color: var(--secondary-hover);
     }
 
     /* Modal / Popup Styles */
@@ -185,7 +210,7 @@
       flex: 1;
       width: 100%;
       height: 100%;
-      background: #525659; /* Standard PDF viewer background */
+      background: #525659;
     }
 
     .modal-body iframe {
@@ -204,9 +229,9 @@
         padding: 12px;
       }
 
-      .view-btn {
-        padding: 6px 12px;
-        font-size: 0.85rem;
+      .view-btn, .download-btn {
+        padding: 6px 10px;
+        font-size: 0.8rem;
       }
 
       .modal-container {
@@ -224,7 +249,7 @@
   <div class="container">
     <header>
       <h1>Document Library</h1>
-      <p>Select a document to preview inline</p>
+      <p>Select a document to preview inline or download</p>
     </header>
 
     <ul class="pdf-list" id="pdfList"></ul>
@@ -244,7 +269,6 @@
   </div>
 
   <script>
-    // List your PDF files here (located in the ./pdf/ directory)
     const pdfFiles = [
       "animator.pdf",
       "WCUGU2025.pdf",
@@ -258,7 +282,6 @@
     const pdfFrame = document.getElementById("pdfFrame");
     const closeModalBtn = document.getElementById("closeModal");
 
-    // SVG PDF Icon
     const pdfIconSvg = `
       <svg class="pdf-icon" viewBox="0 0 24 24">
         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9H13c.8 0 1.5.7 1.5 1.5v3zm4-3.5h-3v1.5h2v1.5h-2V15h-1.5V9H18.5v1.5zM7 10.5h1v1H7v-1zm4.5 0h1v3h-1v-3z"/>
@@ -269,6 +292,7 @@
     function renderPdfList() {
       pdfListElement.innerHTML = "";
       pdfFiles.forEach(filename => {
+        const filePath = `pdf/${encodeURIComponent(filename)}`;
         const li = document.createElement("li");
         li.className = "pdf-item";
         li.innerHTML = `
@@ -276,9 +300,19 @@
             ${pdfIconSvg}
             <span class="pdf-name">${filename}</span>
           </div>
-          <button class="view-btn">View</button>
+          <div class="pdf-actions">
+            <button class="view-btn">View</button>
+            <a href="${filePath}" download="${filename}" class="download-btn">Download</a>
+          </div>
         `;
 
+        // Stop download button click from opening the modal popup
+        const downloadBtn = li.querySelector(".download-btn");
+        downloadBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+        });
+
+        // Clicking the item or view button opens the modal viewer
         li.addEventListener("click", () => openPdfModal(filename));
         pdfListElement.appendChild(li);
       });
@@ -290,17 +324,16 @@
       modalTitle.textContent = filename;
       pdfFrame.src = pdfUrl;
       modal.classList.add("active");
-      document.body.style.overflow = "hidden"; // Prevent background scroll
+      document.body.style.overflow = "hidden";
     }
 
     // Close Modal
     function closePdfModal() {
       modal.classList.remove("active");
-      pdfFrame.src = ""; // Clear iframe source
-      document.body.style.overflow = ""; // Restore background scroll
+      pdfFrame.src = "";
+      document.body.style.overflow = "";
     }
 
-    // Event Listeners for closing modal
     closeModalBtn.addEventListener("click", closePdfModal);
 
     modal.addEventListener("click", (e) => {
@@ -315,7 +348,6 @@
       }
     });
 
-    // Initial render
     renderPdfList();
   </script>
 </body>
