@@ -117,6 +117,7 @@
       font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
+      gap: 6px;
       transition: background-color 0.2s;
     }
 
@@ -136,6 +137,18 @@
 
     .download-btn:hover {
       background-color: var(--secondary-hover);
+    }
+
+    /* Counter Badge Styles */
+    .badge-count {
+      background-color: rgba(255, 255, 255, 0.25);
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      min-width: 20px;
+      text-align: center;
     }
 
     /* Modal / Popup Styles */
@@ -285,50 +298,83 @@
       </svg>
     `;
 
-    // Render list items dynamically
+    // Render list items dynamically with initial 0 or fetched badges
     function renderPdfList() {
       pdfListElement.innerHTML = "";
       pdfFiles.forEach(filename => {
         const filePath = `pdf/${encodeURIComponent(filename)}`;
         const li = document.createElement("li");
         li.className = "pdf-item";
+        li.setAttribute("data-filename", filename);
         li.innerHTML = `
           <div class="pdf-info">
             ${pdfIconSvg}
             <span class="pdf-name">${filename}</span>
           </div>
           <div class="pdf-actions">
-            <button class="view-btn">View</button>
-            <a href="${filePath}" download="${filename}" class="download-btn">Download</a>
+            <button class="view-btn">
+              View <span class="badge-count view-count">0</span>
+            </button>
+            <a href="${filePath}" download="${filename}" class="download-btn">
+              Download <span class="badge-count download-count">0</span>
+            </a>
           </div>
         `;
 
-        // Handle download button click (Tracks download on dgulu.com and prevents modal popup)
+        // Handle download button click
         const downloadBtn = li.querySelector(".download-btn");
         downloadBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          trackPdfAction('https://dgulu.com/api/track_download.php', filename);
+          trackPdfAction('https://dgulu.com/api/track_download.php', filename, li);
         });
 
-        // Handle view button or container click (Tracks view on dgulu.com and opens modal)
+        // Handle view button or container click
         const viewBtn = li.querySelector(".view-btn");
         viewBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          trackPdfAction('https://dgulu.com/api/track_view.php', filename);
+          trackPdfAction('https://dgulu.com/api/track_view.php', filename, li);
           openPdfModal(filename);
         });
 
         li.addEventListener("click", () => {
-          trackPdfAction('https://dgulu.com/api/track_view.php', filename);
+          trackPdfAction('https://dgulu.com/api/track_view.php', filename, li);
           openPdfModal(filename);
         });
 
         pdfListElement.appendChild(li);
       });
+
+      // Fetch initial counts from the server for all rendered files
+      fetchAllStats();
     }
 
-    // API Tracking Function with absolute domain URL
-    function trackPdfAction(endpoint, pdfName) {
+    // Fetch analytics for all listed PDFs to populate initial badge values
+    function fetchAllStats() {
+      pdfFiles.forEach(filename => {
+        fetch(`https://dgulu.com/api/get_stats.php?pdf_name=${encodeURIComponent(filename)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.data) {
+              updateCardBadges(filename, data.data.views, data.data.downloads);
+            }
+          })
+          .catch(err => console.error('Error fetching initial stats:', err));
+      });
+    }
+
+    // Helper to update badges in a specific list item card
+    function updateCardBadges(filename, views, downloads) {
+      const items = document.querySelectorAll('.pdf-item');
+      items.forEach(item => {
+        if (item.getAttribute('data-filename') === filename) {
+          item.querySelector('.view-count').textContent = views;
+          item.querySelector('.download-count').textContent = downloads;
+        }
+      });
+    }
+
+    // API Tracking Function with badge UI update
+    function trackPdfAction(endpoint, pdfName, cardElement) {
       fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -338,8 +384,10 @@
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          console.log(`Successfully updated count for ${pdfName}:`, data.data);
+        if (data.success && data.data) {
+          // Update the badges dynamically with the returned database counts
+          cardElement.querySelector('.view-count').textContent = data.data.views;
+          cardElement.querySelector('.download-count').textContent = data.data.downloads;
         } else {
           console.error('Failed to update counter:', data.error);
         }
