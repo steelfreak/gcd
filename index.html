@@ -303,23 +303,23 @@
           </div>
         `;
 
-        // Handle download button click (Tracks download and prevents modal popup)
+        // Handle download button click (Tracks download on dgulu.com and prevents modal popup)
         const downloadBtn = li.querySelector(".download-btn");
         downloadBtn.addEventListener("click", (e) => {
-          e.stopPropagation(); // Prevent opening the modal
-          trackPdfAction('api/track_download.php', filename);
+          e.stopPropagation();
+          trackPdfAction('https://dgulu.com/api/track_download.php', filename);
         });
 
-        // Handle view button or container click (Tracks view and opens modal)
+        // Handle view button or container click (Tracks view on dgulu.com and opens modal)
         const viewBtn = li.querySelector(".view-btn");
         viewBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          trackPdfAction('api/track_view.php', filename);
+          trackPdfAction('https://dgulu.com/api/track_view.php', filename);
           openPdfModal(filename);
         });
 
         li.addEventListener("click", () => {
-          trackPdfAction('api/track_view.php', filename);
+          trackPdfAction('https://dgulu.com/api/track_view.php', filename);
           openPdfModal(filename);
         });
 
@@ -327,7 +327,7 @@
       });
     }
 
-    // API Tracking Function
+    // API Tracking Function with absolute domain URL
     function trackPdfAction(endpoint, pdfName) {
       fetch(endpoint, {
         method: 'POST',
