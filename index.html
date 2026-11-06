@@ -271,10 +271,6 @@
   <script>
     const pdfFiles = [
       "GCD-October2026.pdf"
-      // "animator.pdf",
-      // "WCUGU2025.pdf",
-      // "User_Manual_v1.0.pdf",
-      // "Financial_Summary.pdf"
     ];
 
     const pdfListElement = document.getElementById("pdfList");
@@ -307,16 +303,48 @@
           </div>
         `;
 
-        // Stop download button click from opening the modal popup
+        // Handle download button click (Tracks download and prevents modal popup)
         const downloadBtn = li.querySelector(".download-btn");
         downloadBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Prevent opening the modal
+          trackPdfAction('api/track_download.php', filename);
         });
 
-        // Clicking the item or view button opens the modal viewer
-        li.addEventListener("click", () => openPdfModal(filename));
+        // Handle view button or container click (Tracks view and opens modal)
+        const viewBtn = li.querySelector(".view-btn");
+        viewBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          trackPdfAction('api/track_view.php', filename);
+          openPdfModal(filename);
+        });
+
+        li.addEventListener("click", () => {
+          trackPdfAction('api/track_view.php', filename);
+          openPdfModal(filename);
+        });
+
         pdfListElement.appendChild(li);
       });
+    }
+
+    // API Tracking Function
+    function trackPdfAction(endpoint, pdfName) {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ pdf_name: pdfName })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          console.log(`Successfully updated count for ${pdfName}:`, data.data);
+        } else {
+          console.error('Failed to update counter:', data.error);
+        }
+      })
+      .catch(error => console.error('Error connecting to tracking API:', error));
     }
 
     // Open Modal
